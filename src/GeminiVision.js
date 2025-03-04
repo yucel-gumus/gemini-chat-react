@@ -1,13 +1,43 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUpload, faImage, faSpinner, faTimes, faSun, faMoon, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 
-const FileUpload = () => {
+const GeminiVision = () => {
   const [inlineData, setInlineData] = useState();
   const [inputText, setInputText] = useState("");
-  const [responseText, setResponseText] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [isSending, setIsSending] = useState(false); 
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef(null);
+  const chatHistoryRef = useRef(null);
+
+  // Load dark mode preference from localStorage on component mount
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem("darkMode");
+    if (savedDarkMode) {
+      setDarkMode(JSON.parse(savedDarkMode));
+    }
+  }, []);
+
+  // Save dark mode preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("darkMode", JSON.stringify(darkMode));
+    // Apply dark mode to body
+    document.body.style.backgroundColor = darkMode ? "#121212" : "#ffffff";
+  }, [darkMode]);
+
+  // Scroll to bottom when chat history updates
+  useEffect(() => {
+    if (chatHistoryRef.current) {
+      chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
+
   function fileToGenerativePart(file, mimeType) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -31,8 +61,25 @@ const FileUpload = () => {
   }
 
   const handleFileChange = async (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files || e.dataTransfer.files);
+    if (files.length === 0) return;
+    
+    setError(null);
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     const firstFile = files[0];
+    
+    if (!allowedTypes.includes(firstFile.type)) {
+      setError("Lütfen geçerli bir resim dosyası yükleyin (JPEG, PNG, GIF, WEBP)");
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (firstFile.size > 5 * 1024 * 1024) {
+      setError("Dosya boyutu çok büyük. Lütfen 5MB'dan küçük bir dosya yükleyin.");
+      return;
+    }
 
     try {
       const generativeParts = await Promise.all(
@@ -46,21 +93,91 @@ const FileUpload = () => {
       return () => URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error("Dosya işleme hatası:", error);
+      setError("Dosya işlenirken bir hata oluştu. Lütfen tekrar deneyin.");
     }
   };
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+  
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+  
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    handleFileChange(e);
+  };
+
   const handleSendMessage = async () => {
+    // Don't send if no image or text
+    if (!inlineData || !inputText.trim()) {
+      setError("Lütfen bir resim yükleyin ve mesaj yazın");
+      return;
+    }
+    
     setIsSending(true);
+    setError(null);
+    
+    // Add user message to chat history
+    setChatHistory(prev => [
+      ...prev, 
+      { 
+        role: "user", 
+        text: inputText,
+        hasImage: true
+      }
+    ]);
+    
+    // Clear input
+    const messageText = inputText;
+    setInputText("");
+    
     try {
-      const response = await axios.post("https://my-node-backend-kappa.vercel.app/api/generateImage", {
-        prompt: inputText,
-        imageParts: inlineData[0],
-      });
+      const response = await axios.post(
+        "https://my-node-backend-kappa.vercel.app/api/generateImage", 
+        {
+          prompt: messageText,
+          imageParts: inlineData[0],
+        },
+        {
+          timeout: 60000, // 60 second timeout for image processing
+        }
+      );
 
       const text = response.data.text;
-      setResponseText(text);
+      
+      // Add assistant response to chat history
+      setChatHistory(prev => [
+        ...prev, 
+        { 
+          role: "assistant", 
+          text: text
+        }
+      ]);
     } catch (error) {
       console.error("Mesaj gönderme hatası:", error);
+      setError(
+        error.response?.data?.error || 
+        "Sunucuyla bağlantı kurulamadı. Lütfen daha sonra tekrar deneyin."
+      );
+      
+      // Add error message to chat history
+      setChatHistory(prev => [
+        ...prev, 
+        { 
+          role: "assistant", 
+          text: "Üzgünüm, bir hata oluştu: " + 
+                (error.response?.data?.error || "Sunucuyla bağlantı kurulamadı. Lütfen daha sonra tekrar deneyin.")
+        }
+      ]);
     } finally {
       setIsSending(false);
     }
@@ -68,45 +185,224 @@ const FileUpload = () => {
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
+    if (error) setError(null);
+  };
+  
+  const handleEnterPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+  
+  const clearImage = () => {
+    setPreviewUrl(null);
+    setInlineData(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+  
+  const toggleDarkMode = () => {
+    setDarkMode(prev => !prev);
   };
 
+  const ChatMessage = ({ message, darkMode }) => (
+    <div
+      className={`message ${message.role}`}
+      style={{
+        padding: "15px",
+        marginBottom: "15px",
+        borderRadius: "10px",
+        backgroundColor: darkMode 
+          ? (message.role === "user" ? "#2a4d69" : "#1a1a1a") 
+          : (message.role === "user" ? "#f0f8ff" : "#f9f9f9"),
+        boxShadow: darkMode ? "0 2px 4px rgba(255, 255, 255, 0.1)" : "0 2px 4px rgba(0, 0, 0, 0.1)",
+        maxWidth: "100%",
+      }}
+    >
+      <div
+        style={{
+          fontWeight: "bold",
+          marginBottom: "5px",
+          color: darkMode ? "#e0e0e0" : "#333",
+        }}
+      >
+        {message.role === "user" ? "Siz" : "Gemini AI"}
+      </div>
+      
+      {message.hasImage && (
+        <div style={{ marginBottom: "10px" }}>
+          <FontAwesomeIcon icon={faImage} style={{ marginRight: "5px", color: darkMode ? "#87CEEB" : "#4682b4" }} />
+          <span style={{ color: darkMode ? "#aaa" : "#666", fontStyle: "italic" }}>Resim yüklendi</span>
+        </div>
+      )}
+      
+      <div style={{ 
+        whiteSpace: "pre-wrap",
+        color: darkMode ? "#e0e0e0" : "#555",
+      }}>
+        {message.text}
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
-      <div style={{ marginBottom: "20px" }}>
+    <div style={{ 
+      padding: "20px", 
+      maxWidth: "800px", 
+      margin: "0 auto",
+      backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
+      borderRadius: "10px",
+      boxShadow: darkMode ? "0 4px 8px rgba(255, 255, 255, 0.1)" : "0 4px 8px rgba(0, 0, 0, 0.1)",
+      transition: "all 0.3s ease",
+    }}>
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        marginBottom: "20px",
+      }}>
+        <h1 style={{ 
+          margin: "0",
+          color: darkMode ? "#e0e0e0" : "#333",
+          fontSize: "24px",
+        }}>
+          Gemini Vision
+        </h1>
+        <button 
+          onClick={toggleDarkMode}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "20px",
+            color: darkMode ? "#e0e0e0" : "#333",
+          }}
+        >
+          <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+        </button>
+      </div>
+      
+      <div 
+        style={{ 
+          marginBottom: "20px",
+          border: `2px dashed ${dragActive ? "#4CAF50" : (darkMode ? "#555" : "#ccc")}`,
+          borderRadius: "10px",
+          padding: "20px",
+          textAlign: "center",
+          backgroundColor: darkMode ? "#2c2c2c" : "#f9f9f9",
+          cursor: "pointer",
+          transition: "all 0.3s ease",
+        }}
+        onClick={() => fileInputRef.current.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <input
           type="file"
-          multiple
+          ref={fileInputRef}
           onChange={handleFileChange}
-          style={{
-            padding: "10px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
+          accept="image/*"
+          style={{ display: "none" }}
         />
-        {previewUrl && (
-          <div style={{ marginTop: "20px" }}>
+        
+        {previewUrl ? (
+          <div style={{ position: "relative", display: "inline-block" }}>
             <img
               src={previewUrl}
               alt="Preview"
               style={{
-                maxWidth: "100px",
-                maxHeight: "100px",
+                maxWidth: "100%",
+                maxHeight: "200px",
                 borderRadius: "10px",
-                border: "1px solid #ccc",
+                border: darkMode ? "1px solid #555" : "1px solid #ccc",
                 boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
               }}
             />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                clearImage();
+              }}
+              style={{
+                position: "absolute",
+                top: "-10px",
+                right: "-10px",
+                backgroundColor: darkMode ? "#444" : "#fff",
+                color: darkMode ? "#e0e0e0" : "#333",
+                border: "none",
+                borderRadius: "50%",
+                width: "25px",
+                height: "25px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+              }}
+            >
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
+          </div>
+        ) : (
+          <div>
+            <FontAwesomeIcon 
+              icon={faUpload} 
+              style={{ 
+                fontSize: "32px", 
+                color: darkMode ? "#87CEEB" : "#4682b4",
+                marginBottom: "10px" 
+              }} 
+            />
+            <p style={{ 
+              margin: "0",
+              color: darkMode ? "#aaa" : "#666" 
+            }}>
+              Resim yüklemek için tıklayın veya sürükleyip bırakın
+            </p>
           </div>
         )}
+      </div>
+
+      {error && (
+        <div style={{ 
+          color: "#ff6b6b", 
+          padding: "10px", 
+          marginBottom: "20px", 
+          backgroundColor: darkMode ? "#2c2c2c" : "#fff0f0",
+          borderRadius: "5px",
+          border: "1px solid #ff6b6b"
+        }}>
+          {error}
+        </div>
+      )}
+      
+      <div 
+        ref={chatHistoryRef}
+        style={{ 
+          maxHeight: "400px", 
+          overflowY: "auto",
+          marginBottom: "20px",
+          padding: "10px",
+          backgroundColor: darkMode ? "#1a1a1a" : "#f5f5f5",
+          borderRadius: "10px",
+          display: chatHistory.length > 0 ? "block" : "none"
+        }}
+        className="custom-scrollbar"
+      >
+        {chatHistory.map((message, index) => (
+          <ChatMessage key={index} message={message} darkMode={darkMode} />
+        ))}
       </div>
 
       <div style={{ position: "relative", marginBottom: "20px" }}>
         <textarea
           id="prompt-textarea"
-          placeholder="Mesajınızı buraya yazın"
+          placeholder="Resim hakkında sormak istediğiniz soruyu yazın"
           onChange={handleInputChange}
+          onKeyDown={handleEnterPress}
           style={{
             resize: "none",
             width: "100%",
@@ -115,55 +411,70 @@ const FileUpload = () => {
             padding: "15px",
             marginBottom: "10px",
             borderRadius: "10px",
-            border: "1px solid #ccc",
+            border: darkMode ? "1px solid #444" : "1px solid #ccc",
             boxSizing: "border-box",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            boxShadow: darkMode ? "0 2px 4px rgba(255, 255, 255, 0.05)" : "0 2px 4px rgba(0, 0, 0, 0.1)",
+            backgroundColor: darkMode ? "#333" : "#fff",
+            color: darkMode ? "#e0e0e0" : "#333",
           }}
           value={inputText}
+          disabled={isSending}
         />
         <button
           onClick={handleSendMessage}
-          disabled={isSending}
+          disabled={isSending || !inlineData}
           style={{
             position: "absolute",
             right: "10px",
-            bottom: "10px",
+            bottom: "20px",
             padding: "10px 20px",
-            backgroundColor: isSending ? "#ccc" : "#4CAF50",
-            color: isSending ? "#666" : "#fff",
+            backgroundColor: isSending || !inlineData 
+              ? (darkMode ? "#555" : "#ccc") 
+              : (darkMode ? "#2a4d69" : "#4CAF50"),
+            color: isSending || !inlineData 
+              ? (darkMode ? "#aaa" : "#666") 
+              : "#fff",
             border: "none",
             borderRadius: "5px",
-            cursor: isSending ? "not-allowed" : "pointer",
+            cursor: isSending || !inlineData ? "not-allowed" : "pointer",
             boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
             transition: "background-color 0.3s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
           }}
-          onMouseEnter={(e) =>
-            !isSending && (e.currentTarget.style.backgroundColor = "#45a049")
-          }
-          onMouseLeave={(e) =>
-            !isSending && (e.currentTarget.style.backgroundColor = "#4CAF50")
-          }
         >
-          Gönder
+          {isSending ? (
+            <FontAwesomeIcon icon={faSpinner} spin />
+          ) : (
+            <FontAwesomeIcon icon={faPaperPlane} />
+          )}
+          <span>Gönder</span>
         </button>
       </div>
 
-      {responseText && (
-        <div
-          style={{
-            padding: "20px",
-            borderRadius: "10px",
-            backgroundColor: "#f9f9f9",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <h2 style={{ marginBottom: "10px", color: "#333" }}>Gemini Ai</h2>
-          <p style={{ color: "#555" }}>{responseText}</p>
-        </div>
-      )}
-      <Link to="/">Gemini Chat</Link>
+      <Link 
+        to="/" 
+        style={{ 
+          display: "block", 
+          textAlign: "center", 
+          padding: "10px",
+          color: darkMode ? "#87CEEB" : "#007bff", 
+          textDecoration: "none",
+          borderRadius: "5px",
+          transition: "background-color 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = darkMode ? "#333" : "#f0f8ff";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "transparent";
+        }}
+      >
+        Gemini Chat'e Dön
+      </Link>
     </div>
   );
 };
 
-export default FileUpload;
+export default GeminiVision;

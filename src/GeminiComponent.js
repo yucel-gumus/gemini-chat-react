@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUp } from "@fortawesome/free-solid-svg-icons";
-import { Link } from "react-router-dom";
+import { faArrowUp, faSun, faMoon, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import "../src/index.css";
 
-const ChatMessage = ({ role, content }) => (
+// Extracted ChatMessage component
+const ChatMessage = ({ role, content, darkMode }) => (
   <div
     className={`card ${role}`}
     style={{
@@ -13,8 +13,11 @@ const ChatMessage = ({ role, content }) => (
       padding: "10px",
       marginBottom: "10px",
       overflow: "hidden",
-      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-      backgroundColor: role === "user" ? "#f0f8ff" : "#e6e6e6",
+      boxShadow: darkMode ? "0 4px 8px rgba(255, 255, 255, 0.1)" : "0 4px 8px rgba(0, 0, 0, 0.1)",
+      backgroundColor: darkMode 
+        ? (role === "user" ? "#2a4d69" : "#1a1a1a") 
+        : (role === "user" ? "#f0f8ff" : "#e6e6e6"),
+      transition: "all 0.3s ease",
     }}
   >
     <div
@@ -22,11 +25,13 @@ const ChatMessage = ({ role, content }) => (
         whiteSpace: "pre-wrap",
         fontSize: "16px",
         fontFamily: "'Trebuchet MS', Helvetica, sans-serif",
-        backgroundColor: role === "user" ? "#add8e6" : "#b0b0b0",
+        backgroundColor: darkMode 
+          ? (role === "user" ? "#4682b4" : "#555555") 
+          : (role === "user" ? "#add8e6" : "#b0b0b0"),
         borderTopLeftRadius: "10px",
         borderTopRightRadius: "10px",
         padding: "10px",
-        color: "#333",
+        color: darkMode ? "#f0f0f0" : "#333",
         fontWeight: "bold",
       }}
     >
@@ -38,12 +43,12 @@ const ChatMessage = ({ role, content }) => (
         fontSize: "14px",
         borderRadius: "10px",
         fontFamily: "'Trebuchet MS', Helvetica, sans-serif",
-        backgroundColor: "#ffffff",
+        backgroundColor: darkMode ? "#2c2c2c" : "#ffffff",
         borderBottomLeftRadius: "10px",
         borderBottomRightRadius: "10px",
         padding: "10px",
         marginTop: "5px",
-        color: "#555",
+        color: darkMode ? "#e0e0e0" : "#555",
       }}
     >
       {content}
@@ -51,7 +56,8 @@ const ChatMessage = ({ role, content }) => (
   </div>
 );
 
-const ChatHistory = ({ messages, chatHistoryRef }) => (
+// Extracted ChatHistory component
+const ChatHistory = ({ messages, chatHistoryRef, darkMode }) => (
   <div
     className="custom-scrollbar"
     ref={chatHistoryRef}
@@ -59,53 +65,121 @@ const ChatHistory = ({ messages, chatHistoryRef }) => (
       overflowY: "auto",
       maxHeight: "600px",
       overflowX: "hidden",
-      maxWidth: "750px",
+      maxWidth: "100%",
       borderRadius: "10px",
       padding: "10px",
-      backgroundColor: "#f9f9f9",
+      backgroundColor: darkMode ? "#1e1e1e" : "#f9f9f9",
+      transition: "background-color 0.3s ease",
     }}
   >
-    {messages.map((message, index) => (
-      <ChatMessage key={index} role={message.role} content={message.text} />
-    ))}
+    {messages.length === 0 ? (
+      <div style={{
+        textAlign: "center", 
+        padding: "20px", 
+        color: darkMode ? "#aaa" : "#888",
+        fontStyle: "italic"
+      }}>
+        Sohbete başlamak için bir mesaj gönderin
+      </div>
+    ) : (
+      messages.map((message, index) => (
+        <ChatMessage key={index} role={message.role} content={message.text} darkMode={darkMode} />
+      ))
+    )}
   </div>
 );
 
+// Typing animation component
+const TypingAnimation = ({ darkMode }) => (
+  <div style={{ 
+    display: "flex", 
+    justifyContent: "center", 
+    padding: "10px",
+    color: darkMode ? "#aaa" : "#888" 
+  }}>
+    <FontAwesomeIcon 
+      icon={faSpinner} 
+      spin 
+      style={{ marginRight: "10px" }} 
+    />
+    <span>Yanıt yazılıyor...</span>
+  </div>
+);
+
+// Main component
 const GenerativeAIComponent = () => {
   const [inputText, setInputText] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
   const chatHistoryRef = useRef(null);
+
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem("darkMode");
+    if (savedDarkMode) {
+      setDarkMode(JSON.parse(savedDarkMode));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("darkMode", JSON.stringify(darkMode));
+    document.body.style.backgroundColor = darkMode ? "#121212" : "#ffffff";
+  }, [darkMode]);
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
+    if (error) setError(null);
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+    
+    if (!inputText.trim()) return;
+    
     setLoading(true);
+    setError(null);
+
+    setChatHistory((prevHistory) => [
+      ...prevHistory,
+      { role: "user", text: inputText },
+    ]);
+    
+    const messageText = inputText;
+    setInputText("");
 
     try {
       const response = await axios.post(
-        "https://my-node-backend-kappa.vercel.app/api/generateContent",
+        "http://localhost:8080/api/generateContent",
         {
-          prompt: inputText,
-          past_messages: chatHistory
-            .filter((msg) => msg.role === "assistant")
-            .map((msg) => msg.text),
+          prompt: messageText,
+        },
+        {
+          timeout: 30000,
         }
       );
 
-      const text =
-        response.data.chatHistory[response.data.chatHistory.length - 1].text;
+      const text = response.data.text || "Yanıt alınamadı.";
+      
       setChatHistory((prevHistory) => [
         ...prevHistory,
-        { role: "user", text: inputText },
         { role: "assistant", text },
       ]);
-      setInputText("");
     } catch (error) {
       console.error("Error sending message:", error);
+      setError(
+        error.response?.data?.error || 
+        "Sunucuyla bağlantı kurulamadı. Lütfen daha sonra tekrar deneyin."
+      );
+      
+      setChatHistory((prevHistory) => [
+        ...prevHistory,
+        { 
+          role: "assistant", 
+          text: "Üzgünüm, bir hata oluştu: " + 
+                (error.response?.data?.error || "Sunucuyla bağlantı kurulamadı. Lütfen daha sonra tekrar deneyin.")
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -124,35 +198,85 @@ const GenerativeAIComponent = () => {
     }
   };
 
+  const toggleDarkMode = () => {
+    setDarkMode(prev => !prev);
+  };
+
   return (
     <div
       className="container"
-      style={{ maxWidth: "800px", margin: "50px auto", borderRadius: "10px", backgroundColor: "#ffffff", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)" }}
+      style={{ 
+        maxWidth: "800px", 
+        margin: "50px auto", 
+        borderRadius: "10px", 
+        backgroundColor: darkMode ? "#1e1e1e" : "#ffffff", 
+        boxShadow: darkMode ? "0 4px 8px rgba(255, 255, 255, 0.1)" : "0 4px 8px rgba(0, 0, 0, 0.1)",
+        transition: "all 0.3s ease",
+        padding: "20px",
+      }}
     >
-      <div className="row" style={{ margin: "10px 20px" }}>
+      <div className="header" style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        marginBottom: "20px",
+      }}>
         <strong
           className="title"
           style={{
-            marginBottom: "10px",
             fontSize: "24px",
             fontWeight: "bold",
-            color: "#333",
+            color: darkMode ? "#e0e0e0" : "#333",
           }}
         >
-          Sohbet Geçmişi
+          Gemini Chat
         </strong>
+        <button 
+          onClick={toggleDarkMode}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "20px",
+            color: darkMode ? "#e0e0e0" : "#333",
+          }}
+        >
+          <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+        </button>
+      </div>
 
-        <ChatHistory messages={chatHistory} chatHistoryRef={chatHistoryRef} />
+      <div className="row" style={{ margin: "10px 0" }}>
+        <ChatHistory 
+          messages={chatHistory} 
+          chatHistoryRef={chatHistoryRef} 
+          darkMode={darkMode} 
+        />
+        
+        {loading && <TypingAnimation darkMode={darkMode} />}
+        
+        {error && !loading && (
+          <div style={{ 
+            color: "#ff6b6b", 
+            padding: "10px", 
+            marginTop: "10px", 
+            backgroundColor: darkMode ? "#2c2c2c" : "#fff0f0",
+            borderRadius: "5px",
+            border: "1px solid #ff6b6b"
+          }}>
+            {error}
+          </div>
+        )}
       </div>
 
       <div
         className="footer"
         style={{
-          padding: "10px 20px",
+          padding: "10px 0",
           borderRadius: "10px",
-          boxShadow: "0 -4px 8px rgba(0, 0, 0, 0.1)",
-          backgroundColor: "#f9f9f9",
+          boxShadow: darkMode ? "0 -4px 8px rgba(255, 255, 255, 0.05)" : "0 -4px 8px rgba(0, 0, 0, 0.05)",
+          backgroundColor: darkMode ? "#2c2c2c" : "#f9f9f9",
           position: "relative",
+          marginTop: "20px",
         }}
       >
         <textarea
@@ -167,32 +291,32 @@ const GenerativeAIComponent = () => {
             height: "100px",
             marginBottom: "10px",
             borderRadius: "10px",
-            border: "1px solid #ccc",
+            border: darkMode ? "1px solid #444" : "1px solid #ccc",
             boxSizing: "border-box",
             padding: "10px",
-            backgroundColor: "#ffffff",
+            backgroundColor: darkMode ? "#333" : "#ffffff",
+            color: darkMode ? "#e0e0e0" : "#333",
           }}
           value={inputText}
+          disabled={loading}
         />
         <FontAwesomeIcon
-          icon={faArrowUp}
-          onClick={handleSendMessage}
+          icon={loading ? faSpinner : faArrowUp}
+          spin={loading}
+          onClick={!loading ? handleSendMessage : undefined}
           style={{
-            cursor: "pointer",
+            cursor: loading ? "not-allowed" : "pointer",
             fontSize: "24px",
-            color: loading ? "#ccc" : "#87CEEB",
+            color: loading ? (darkMode ? "#555" : "#ccc") : (darkMode ? "#87CEEB" : "#87CEEB"),
             pointerEvents: loading ? "none" : "auto",
             position: "absolute",
             bottom: "15px",
             right: "15px",
+            transition: "color 0.3s ease",
           }}
-        />
-        <Link to="/geminivision" style={{ display: "block", textAlign: "center", marginTop: "10px", color: "#007bff", textDecoration: "none" }}>
-          Gemini Vision
-        </Link>
+        />    
       </div>
     </div>
   );
 };
-
 export default GenerativeAIComponent;
