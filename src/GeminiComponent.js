@@ -150,7 +150,7 @@ const GenerativeAIComponent = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/generateContent",
+        "https://my-node-backend-kappa.vercel.app/api/generateContent",
         {
           prompt: messageText,
         },
