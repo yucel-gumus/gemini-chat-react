@@ -112,7 +112,7 @@ const Layout = ({ children, darkMode, toggleDarkMode }) => {
         color: darkMode ? "#aaa" : "#666",
         fontSize: "14px",
       }}>
-        &copy; {new Date().getFullYear()} Gemini AI Chat - Tüm hakları saklıdır.
+        &copy; {new Date().getFullYear()} Yücel Gümüş- Tüm hakları saklıdır.
       </footer>
     </div>
   );

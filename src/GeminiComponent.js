@@ -150,7 +150,7 @@ const GenerativeAIComponent = () => {
 
     try {
       const response = await axios.post(
-        "https://my-node-backend-kappa.vercel.app/api/generateContent",
+        "https://gem2-node.vercel.app/api/generateContent",
         {
           prompt: messageText,
         },
@@ -221,28 +221,6 @@ const GenerativeAIComponent = () => {
         alignItems: "center",
         marginBottom: "20px",
       }}>
-        <strong
-          className="title"
-          style={{
-            fontSize: "24px",
-            fontWeight: "bold",
-            color: darkMode ? "#e0e0e0" : "#333",
-          }}
-        >
-          Gemini Chat
-        </strong>
-        <button 
-          onClick={toggleDarkMode}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: "20px",
-            color: darkMode ? "#e0e0e0" : "#333",
-          }}
-        >
-          <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
-        </button>
       </div>
 
       <div className="row" style={{ margin: "10px 0" }}>
