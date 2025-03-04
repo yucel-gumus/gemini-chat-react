@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUp, faSun, faMoon, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import "../src/index.css";
 
 // Extracted ChatMessage component
@@ -198,9 +198,9 @@ const GenerativeAIComponent = () => {
     }
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(prev => !prev);
-  };
+  // const toggleDarkMode = () => {
+  //   setDarkMode(prev => !prev);
+  // };
 
   return (
     <div

@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faUpload, 
   faImage, 
   faSpinner, 
   faTimes, 
-  faSun, 
-  faMoon, 
   faPaperPlane 
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -211,10 +208,6 @@ const GeminiVision = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, []);
-
-  const toggleDarkMode = useCallback(() => {
-    setDarkMode(prev => !prev);
   }, []);
 
   return (
