@@ -1,94 +1,137 @@
-# Ceminay - Gemini AI Chat Application
+# Ceminay - Gemini AI Sohbet Uygulaması
 
-A modern chat application built with React that leverages Google's Gemini AI for conversations and image analysis.
+Google'ın Gemini AI modelleri kullanılarak geliştirilen modern bir sohbet ve görüntü analizi uygulaması.
 
-## Features
+## Özellikler
 
-- **Text Chat**: Have conversations with Gemini AI
-- **Vision Chat**: Upload images for analysis and ask questions about them
-- **Dark/Light Mode**: Toggleable theme with system preference detection
-- **Responsive Design**: Works on mobile, tablet, and desktop devices
-- **Serverless Backend**: Uses Netlify Functions to interact with the Gemini API
+- **Metin Sohbeti**: Gemini AI ile akıllı sohbetler
+- **Görüntü Analizi**: Resimleri yükleyerek analiz etme ve sorular sorma
+- **Karanlık/Aydınlık Tema**: Sistem tercihini otomatik algılayan tema seçeneği
+- **Responsive Tasarım**: Mobil, tablet ve masaüstü cihazlarda sorunsuz çalışır
+- **Sunucusuz Backend**: Netlify Functions ile Gemini API entegrasyonu
 
-## Tech Stack
+## Teknoloji Altyapısı
 
 - React.js (18+)
-- CSS with custom properties for theming
+- CSS custom properties ile dinamik tema desteği
 - Google Generative AI SDK
-- FontAwesome for icons
-- Netlify for hosting and serverless functions
+- FontAwesome ikonları
+- Netlify (hosting ve sunucusuz fonksiyonlar)
 
-## Getting Started
+## Başlangıç
 
-### Prerequisites
+### Gereksinimler
 
-- Node.js 14+ and npm
-- A Google AI Studio API key for Gemini (from https://aistudio.google.com/)
+- Node.js 14+ ve npm
+- Google AI Studio'dan alınmış Gemini API anahtarı (https://aistudio.google.com/ adresinden edinebilirsiniz)
 
-### Installation
+### Kurulum
 
-1. Clone the repository
+1. Projeyi klonlayın
 ```
-git clone https://github.com/yourusername/ceminay-gemini-chat.git
-cd ceminay-gemini-chat
+git clone https://github.com/yucel-gumus/gemini-chat-react.git
+cd gemini-chat-react
 ```
 
-2. Install dependencies
+2. Bağımlılıkları yükleyin
 ```
 npm install
 cd netlify/functions && npm install && cd ../..
 ```
 
-3. Set up environment variables
-Create a `.env` file in the root directory and add your API key:
+3. Ortam değişkenlerini ayarlayın
+Kök dizinde `.env` dosyası oluşturun ve API anahtarınızı ekleyin:
 ```
-GEMINI_API_KEY=your_api_key_here
+REACT_APP_GEMINI_API_KEY=size_ait_api_anahtari
 ```
 
-### Development
+### Geliştirme
 
-To run the app locally:
+Uygulamayı yerel olarak çalıştırmak için:
 ```
 npm start
 ```
 
-To run the Netlify Functions locally:
+Netlify Functions'ı yerel olarak çalıştırmak için:
 ```
 npm install -g netlify-cli
 netlify dev
 ```
 
-## Deployment
+## Netlify'da Yayınlama
 
-This project is configured for deployment on Netlify:
+Bu proje Netlify'da yayınlanacak şekilde yapılandırılmıştır. Bu sayede hem frontend hem de backend kısmı herhangi bir ek sunucu gerektirmeden çalışabilir.
 
-1. Push your code to a GitHub repository
+### Adım Adım Deployment Süreci
 
-2. Log in to Netlify, create a new site from Git, and link your repository
+1. GitHub reponuzu oluşturun veya var olanı kullanın
+   - Reponun public olması gerekmez, Netlify ile özel repolar da bağlanabilir
 
-3. Configure build settings:
-   - Build command: `npm run build`
-   - Publish directory: `build`
+2. Netlify'da hesap oluşturun ve giriş yapın
+   - https://app.netlify.com/ adresinden ücretsiz kaydolabilirsiniz
 
-4. Add your environment variables in the Netlify UI:
-   - GEMINI_API_KEY: your_api_key_here
+3. Netlify'da "New site from Git" seçeneğini tıklayın
+   - GitHub hesabınızı bağlayın ve reponuzu seçin
 
-5. Deploy!
+4. Build ayarlarını yapılandırın:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `build`
 
-## Usage
+5. "Show advanced" butonunu tıklayıp ortam değişkenlerini ekleyin:
+   - Key: `GEMINI_API_KEY` 
+   - Value: `size_ait_api_anahtari`
+   - (Bu değişken Netlify Functions tarafından kullanılacaktır)
 
-- **Text Chat**: Select the "Chat" tab and start typing
-- **Vision Chat**: 
-  - Select the "Vision" tab
-  - Upload an image by dragging and dropping or clicking the upload area
-  - Ask questions about the image
+6. "Deploy site" butonuna tıklayın ve kurulumun tamamlanmasını bekleyin
 
-## License
+7. (İsteğe bağlı) Özel domain ayarlayın:
+   - Site Settings > Domain management bölümünden özel domain ekleyebilirsiniz
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Netlify CLI ile Hızlı Deployment
 
-## Acknowledgments
+Netlify CLI kullanarak tek komutla deployment yapabilirsiniz:
 
-- Google for the Gemini AI API
-- The React team
-- Netlify for serverless hosting 
+```bash
+# Netlify CLI'yi global olarak yükleyin
+npm install -g netlify-cli
+
+# Oturum açın
+netlify login
+
+# Siteyi bağlayın (yeni site oluşturur)
+netlify init
+
+# Deploy edin
+netlify deploy --prod
+```
+
+### Ortam Değişkeni Güncelleme
+
+API anahtarınızı değiştirmeniz gerekirse:
+
+1. Netlify Dashboard'a gidin
+2. Site Settings > Build & deploy > Environment > Environment variables
+3. `GEMINI_API_KEY` değişkenini güncelleyin
+4. "Trigger deploy" ile yeni bir deployment başlatın
+
+## Kullanım
+
+- **Metin Sohbeti**: "Chat" sekmesini seçin ve sorunuzu yazın
+- **Görüntü Analizi**: 
+  - "Vision" sekmesini seçin
+  - Sürükle-bırak yöntemiyle veya dosya seçiciyi kullanarak bir görüntü yükleyin
+  - Görüntü hakkında soru sorun
+
+## Lisans
+
+Bu proje MIT Lisansı altında lisanslanmıştır.
+
+## İletişim
+
+Yücel Gümüş - yucelgmus@gmail.com
+
+Proje Bağlantısı: [https://github.com/yucel-gumus/gemini-chat-react](https://github.com/yucel-gumus/gemini-chat-react)
+
+## Canlı Demo
+
+Canlı Demo: [https://gemini-chat-image.netlify.app/](https://gemini-chat-image.netlify.app/) 
