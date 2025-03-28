@@ -84,13 +84,6 @@ export const useVision = () => {
   // Handle image selection
   const handleImageSelect = useCallback((e) => {
     const file = e.target.files[0];
-    if (file) {
-      handleImageFile(file);
-    }
-  }, [handleImageFile]);
-
-  // Handle image file processing
-  const handleImageFile = useCallback((file) => {
     if (!file) return;
     
     // Validate file type
@@ -144,9 +137,38 @@ export const useVision = () => {
     setIsDragging(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleImageFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      
+      // İnline handleImageFile işlemlerini burada yapın, bağımlılık yaratmadan
+      if (!file) return;
+    
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setError('Lütfen geçerli bir görüntü dosyası seçin (JPEG, PNG, GIF, WEBP)');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Görüntü dosyası 5MB\'dan küçük olmalıdır');
+        return;
+      }
+      
+      setSelectedImage(file);
+      
+      // Create preview for the selected image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+        setError(null);
+      };
+      reader.onerror = () => {
+        setError('Görüntü dosyası okunamadı. Lütfen tekrar deneyin.');
+      };
+      reader.readAsDataURL(file);
     }
-  }, [handleImageFile]);
+  }, []);
 
   // Clear image and chat
   const clearVision = useCallback(() => {
