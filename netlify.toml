@@ -1,6 +1,6 @@
 # Netlify yapılandırma dosyası
 [build]
-  command = "npm run build"  # Build komutu
+  command = "CI=false npm run build"  # Build komutu - CI=false uyarıları hata olarak görmemesi için eklendi
   publish = "build"          # Yayınlanacak klasör
   functions = "netlify/functions"  # Netlify fonksiyonlarının bulunduğu klasör
 

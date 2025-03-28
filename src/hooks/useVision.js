@@ -87,7 +87,7 @@ export const useVision = () => {
     if (file) {
       handleImageFile(file);
     }
-  }, []);
+  }, [handleImageFile]);
 
   // Handle image file processing
   const handleImageFile = useCallback((file) => {

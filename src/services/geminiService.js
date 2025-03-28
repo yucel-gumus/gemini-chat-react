@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // API Anahtarı
@@ -11,17 +10,6 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 const API_BASE_URL = process.env.NODE_ENV === 'development' 
   ? 'http://localhost:8888/.netlify/functions/api'
   : '/.netlify/functions/api';
-
-const ENDPOINTS = {
-  GENERATE_TEXT: `${API_BASE_URL}/generateContent`,
-  GENERATE_IMAGE: `${API_BASE_URL}/generateImage`
-};
-
-// Request timeouts in milliseconds
-const TIMEOUTS = {
-  TEXT: 60000, // 60 saniye
-  IMAGE: 90000  // 90 saniye
-};
 
 // API durumunu kontrol et
 export const checkApiStatus = async () => {
